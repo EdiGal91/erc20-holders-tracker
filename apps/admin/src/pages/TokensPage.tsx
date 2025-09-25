@@ -69,6 +69,12 @@ export function TokensPage() {
     return chain?.name || `Chain ${chainId}`;
   };
 
+  const getTokenExplorerUrl = (chainId: number, address: string) => {
+    const chain = chains.find((c) => c.chainId === chainId);
+    if (!chain?.explorerUrl) return null;
+    return `${chain.explorerUrl}/token/${address}`;
+  };
+
   if (error) {
     return (
       <div className="text-center py-8">
@@ -171,6 +177,39 @@ export function TokensPage() {
                           <div className="text-sm text-gray-900 font-mono max-w-xs truncate">
                             {token.address}
                           </div>
+                          {getTokenExplorerUrl(
+                            token.chainId,
+                            token.address
+                          ) && (
+                            <div className="mt-1">
+                              <a
+                                href={
+                                  getTokenExplorerUrl(
+                                    token.chainId,
+                                    token.address
+                                  )!
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-900"
+                              >
+                                <svg
+                                  className="w-3 h-3 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                                View Contract
+                              </a>
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div>Decimals: {token.decimals}</div>
