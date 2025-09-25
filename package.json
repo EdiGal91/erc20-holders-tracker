@@ -5,12 +5,16 @@
     "apps/*"
   ],
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ERC20 Tracker",
   "scripts": {
-    "dev": "docker compose up --build"
+    "dev": "docker compose up -d --build",
+    "stop": "docker compose down",
+    "restart": "npm run stop && npm run dev"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "erc20",
+    "tracker"
+  ],
+  "author": "EdiGal",
   "license": "ISC"
 }

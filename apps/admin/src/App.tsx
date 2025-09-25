@@ -1,20 +1,38 @@
-import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { ChainsPage } from "./pages/ChainsPage";
+import { TokensPage } from "./pages/TokensPage";
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <>
-      <div>
-        <h1>Hello World {count}</h1>
-        <button
-          onClick={() => setCount(count + 1)}
-          className="bg-blue-500 text-white p-2 rounded-md"
-        >
-          Increment
-        </button>
-      </div>
-    </>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Navigate to="/chains" replace />} />
+            <Route path="/chains" element={<ChainsPage />} />
+            <Route path="/tokens" element={<TokensPage />} />
+          </Routes>
+        </Layout>
+      </Router>
+    </QueryClientProvider>
   );
 }
 
