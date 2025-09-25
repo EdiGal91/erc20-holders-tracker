@@ -26,9 +26,9 @@ export class Chain {
 
   @Prop({
     required: true,
-    select: false, // Don't include in queries by default for security
+    select: false,
   })
-  apiKey: string; // This will be encrypted
+  apiKey: string; // encrypted
 
   @Prop({
     required: true,

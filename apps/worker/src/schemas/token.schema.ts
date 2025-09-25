@@ -51,7 +51,6 @@ export class Token {
 
 export const TokenSchema = SchemaFactory.createForClass(Token);
 
-// Add compound indexes for better query performance
 TokenSchema.index({ chainId: 1, address: 1 }, { unique: true });
 TokenSchema.index({ chainId: 1, enabled: 1 });
 TokenSchema.index({ symbol: 1 });
