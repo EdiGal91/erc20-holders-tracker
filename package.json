@@ -1,0 +1,16 @@
+{
+  "name": "erc20-tracker",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "docker compose up --build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
