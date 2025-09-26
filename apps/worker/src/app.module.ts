@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
 import { SyncTransfersModule } from './sync-transfers/sync-transfers.module';
+import { CalcBalancesModule } from './calc-balances/calc-balances.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SyncTransfersModule } from './sync-transfers/sync-transfers.module';
       adapter: ExpressAdapter,
     }),
     SyncTransfersModule,
+    CalcBalancesModule,
   ],
   controllers: [],
   providers: [],

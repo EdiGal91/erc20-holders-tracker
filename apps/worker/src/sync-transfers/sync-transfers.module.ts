@@ -25,6 +25,9 @@ import { EncryptionService } from '../common/encryption.service';
     BullModule.registerQueue({
       name: 'sync_transfers',
     }),
+    BullModule.registerQueue({
+      name: 'calc_balances',
+    }),
     BullBoardModule.forFeature({
       name: 'sync_transfers',
       adapter: BullMQAdapter,

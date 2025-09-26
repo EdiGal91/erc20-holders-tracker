@@ -1,7 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { InjectModel } from '@nestjs/mongoose';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Model } from 'mongoose';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { Chain, ChainDocument } from '../schemas/chain.schema';
 import { Token, TokenDocument } from '../schemas/token.schema';
@@ -11,7 +12,6 @@ import {
   TransferDocument,
   TransferStatus,
 } from '../schemas/transfer.schema';
-import { Balance, BalanceDocument } from '../schemas/balance.schema';
 import { EtherscanService } from '../services/etherscan.service';
 import { EncryptionService } from '../common/encryption.service';
 
@@ -24,7 +24,7 @@ export class SyncTransfersProcessor extends WorkerHost {
     @InjectModel(Token.name) private tokenModel: Model<TokenDocument>,
     @InjectModel(Syncer.name) private syncerModel: Model<SyncerDocument>,
     @InjectModel(Transfer.name) private transferModel: Model<TransferDocument>,
-    @InjectModel(Balance.name) private balanceModel: Model<BalanceDocument>,
+    @InjectQueue('calc_balances') private calcBalancesQueue: Queue,
     private etherscanService: EtherscanService,
     private encryptionService: EncryptionService,
   ) {
@@ -118,6 +118,11 @@ export class SyncTransfersProcessor extends WorkerHost {
       chain.logsRange,
     );
 
+    // Track unique addresses for balance calculation
+    const uniqueAddresses = new Set<string>();
+    let savedCount = 0;
+    let skippedCount = 0;
+
     for (const log of transferLogs) {
       const transfer = this.etherscanService.parseTransferLog(log);
 
@@ -136,9 +141,20 @@ export class SyncTransfersProcessor extends WorkerHost {
         });
 
         await transferDoc.save();
+        savedCount++;
+
+        // Add addresses to set for balance calculation (skip zero address)
+        const zeroAddress = '0x0000000000000000000000000000000000000000';
+        if (transfer.from !== zeroAddress) {
+          uniqueAddresses.add(transfer.from.toLowerCase());
+        }
+        if (transfer.to !== zeroAddress) {
+          uniqueAddresses.add(transfer.to.toLowerCase());
+        }
       } catch (error) {
         if (error.code === 11000) {
           // Duplicate key error - transfer already exists (idempotency)
+          skippedCount++;
           this.logger.debug(
             `Transfer already exists: ${transfer.transactionHash}:${transfer.logIndex}`,
           );
@@ -150,6 +166,19 @@ export class SyncTransfersProcessor extends WorkerHost {
           throw error;
         }
       }
+    }
+
+    this.logger.log(
+      `Processed ${transferLogs.length} transfers for ${token.symbol}: ${savedCount} saved, ${skippedCount} skipped`,
+    );
+
+    // Add unique addresses to calc_balances queue
+    if (uniqueAddresses.size > 0) {
+      await this.scheduleBalanceCalculations(
+        chain.chainId,
+        token.address,
+        Array.from(uniqueAddresses),
+      );
     }
 
     // Update syncer cursor with the highest block number processed
@@ -220,5 +249,35 @@ export class SyncTransfersProcessor extends WorkerHost {
         lastScannedBlock: blockNumber,
       },
     );
+  }
+
+  private async scheduleBalanceCalculations(
+    chainId: number,
+    tokenAddress: string,
+    addresses: string[],
+  ): Promise<void> {
+    try {
+      const jobs = addresses.map((address) => ({
+        name: 'calc_balance',
+        data: {
+          chainId,
+          tokenAddress,
+          address,
+        },
+        opts: {},
+      }));
+
+      await this.calcBalancesQueue.addBulk(jobs);
+
+      this.logger.log(
+        `Scheduled balance calculations for ${addresses.length} unique addresses on chain ${chainId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to schedule balance calculations:`,
+        error.message,
+      );
+      // Don't throw here to avoid stopping the entire sync job
+    }
   }
 }

@@ -95,8 +95,8 @@ export class EtherscanService {
     // topics[2] = to address (padded to 32 bytes)
     // data = amount (hex)
 
-    const from = '0x' + log.topics[1].slice(-40).toLowerCase(); // Remove padding, keep last 40 chars
-    const to = '0x' + log.topics[2].slice(-40).toLowerCase(); // Remove padding, keep last 40 chars
+    const from = '0x' + log.topics[1].slice(-40).toLowerCase();
+    const to = '0x' + log.topics[2].slice(-40).toLowerCase();
     const amount = BigInt(log.data).toString();
     const timestamp = new Date(parseInt(log.timeStamp, 16) * 1000);
 
@@ -106,7 +106,7 @@ export class EtherscanService {
       amount,
       blockNumber: parseInt(log.blockNumber, 16),
       transactionHash: log.transactionHash,
-      logIndex: parseInt(log.logIndex, 16),
+      logIndex: log.logIndex === '0x' ? 0 : parseInt(log.logIndex, 16),
       timestamp,
     };
   }
