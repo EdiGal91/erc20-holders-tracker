@@ -9,6 +9,11 @@ export function Layout({ children }: LayoutProps) {
 
   const navigation = [
     {
+      name: "Holders",
+      href: "/holders",
+      current: location.pathname === "/holders",
+    },
+    {
       name: "Chains",
       href: "/chains",
       current: location.pathname === "/chains",

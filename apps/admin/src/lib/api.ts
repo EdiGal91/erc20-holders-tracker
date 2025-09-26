@@ -32,7 +32,6 @@ api.interceptors.response.use(
   }
 );
 
-// Chain API types
 export interface Chain {
   _id: string;
   chainId: number;
@@ -70,7 +69,6 @@ export interface UpdateChainRequest {
   explorerUrl?: string;
 }
 
-// Token API types
 export interface Token {
   _id: string;
   chainId: number;
@@ -97,6 +95,18 @@ export interface UpdateTokenRequest {
   decimals?: number;
   enabled?: boolean;
   name?: string;
+}
+
+export interface Balance {
+  _id: string;
+  chainId: number;
+  token: string;
+  address: string;
+  confirmed: string;
+  pending: string;
+  blockNumber: number;
+  tokenInfo: Token;
+  chainInfo: Chain;
 }
 
 // Chain API functions
@@ -164,4 +174,17 @@ export const tokenApi = {
     tokens: { chainId: number; address: string; enabled: boolean }[]
   ): Promise<void> =>
     api.post("/tokens/bulk-update", tokens).then(() => undefined),
+};
+
+// Balance API functions
+export const balanceApi = {
+  getTopHolders: (tokenAddress?: string): Promise<Balance[]> => {
+    const params = new URLSearchParams();
+    if (tokenAddress) {
+      params.append("tokenAddress", tokenAddress);
+    }
+    return api
+      .get(`/balances/holders?${params.toString()}`)
+      .then((res) => res.data);
+  },
 };

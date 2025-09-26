@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ChainsModule } from './chains/chains.module';
 import { TokensModule } from './tokens/tokens.module';
+import { BalancesModule } from './balances/balances.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TokensModule } from './tokens/tokens.module';
     }),
     ChainsModule,
     TokensModule,
+    BalancesModule,
   ],
 })
 export class AppModule {}

@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { HoldersPage } from "./pages/HoldersPage";
 import { ChainsPage } from "./pages/ChainsPage";
 import { TokensPage } from "./pages/TokensPage";
 
@@ -26,7 +27,8 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<Navigate to="/chains" replace />} />
+            <Route path="/" element={<Navigate to="/holders" replace />} />
+            <Route path="/holders" element={<HoldersPage />} />
             <Route path="/chains" element={<ChainsPage />} />
             <Route path="/tokens" element={<TokensPage />} />
           </Routes>
