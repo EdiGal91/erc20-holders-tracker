@@ -104,12 +104,3 @@ TransferSchema.index(
   { chainId: 1, txHash: 1, logIndex: 1 },
   { unique: true, name: 'transfer_idempotency' },
 );
-
-// Additional indexes for common queries
-TransferSchema.index({ chainId: 1, token: 1 }); // Query transfers by chain and token
-TransferSchema.index({ chainId: 1, from: 1 }); // Query transfers by sender
-TransferSchema.index({ chainId: 1, to: 1 }); // Query transfers by recipient
-TransferSchema.index({ blockNumber: 1 }); // Query transfers by block
-TransferSchema.index({ timestamp: -1 }); // Query recent transfers
-TransferSchema.index({ status: 1 }); // Query by status
-TransferSchema.index({ createdAt: -1 }); // Query by creation time

@@ -9,6 +9,7 @@ import { Chain, ChainSchema } from '../schemas/chain.schema';
 import { Token, TokenSchema } from '../schemas/token.schema';
 import { Syncer, SyncerSchema } from '../schemas/syncer.schema';
 import { Transfer, TransferSchema } from '../schemas/transfer.schema';
+import { Balance, BalanceSchema } from '../schemas/balance.schema';
 import { EtherscanService } from '../services/etherscan.service';
 import { EncryptionService } from '../common/encryption.service';
 
@@ -19,6 +20,7 @@ import { EncryptionService } from '../common/encryption.service';
       { name: Token.name, schema: TokenSchema },
       { name: Syncer.name, schema: SyncerSchema },
       { name: Transfer.name, schema: TransferSchema },
+      { name: Balance.name, schema: BalanceSchema },
     ]),
     BullModule.registerQueue({
       name: 'sync_transfers',

@@ -11,6 +11,7 @@ import {
   TransferDocument,
   TransferStatus,
 } from '../schemas/transfer.schema';
+import { Balance, BalanceDocument } from '../schemas/balance.schema';
 import { EtherscanService } from '../services/etherscan.service';
 import { EncryptionService } from '../common/encryption.service';
 
@@ -23,6 +24,7 @@ export class SyncTransfersProcessor extends WorkerHost {
     @InjectModel(Token.name) private tokenModel: Model<TokenDocument>,
     @InjectModel(Syncer.name) private syncerModel: Model<SyncerDocument>,
     @InjectModel(Transfer.name) private transferModel: Model<TransferDocument>,
+    @InjectModel(Balance.name) private balanceModel: Model<BalanceDocument>,
     private etherscanService: EtherscanService,
     private encryptionService: EncryptionService,
   ) {
@@ -30,188 +32,193 @@ export class SyncTransfersProcessor extends WorkerHost {
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
-    console.log('Processing sync_transfers job:', job.id, job.data);
+    const { chainId, tokenAddress, tokenSymbol } = job.data;
+
+    this.logger.log(
+      `Processing sync job for ${tokenSymbol} (${tokenAddress}) on chain ${chainId}`,
+    );
 
     try {
-      // Fetch all enabled chains with API keys
-      const enabledChains = await this.chainModel
-        .find({ enabled: true })
-        .select('+apiKey')
-        .sort({ chainId: 1 });
+      const chain = await this.chainModel
+        .findOne({ chainId, enabled: true })
+        .select('+apiKey');
 
-      console.log(`Found ${enabledChains.length} enabled chains`);
-
-      // Process each chain
-      for (const chain of enabledChains) {
-        // Fetch enabled tokens for this chain
-        const enabledTokens = await this.tokenModel
-          .find({ chainId: chain.chainId, enabled: true })
-          .sort({ symbol: 1 });
-
-        console.log(
-          `Chain ${chain.chainId} (${chain.name || 'Unknown'}): ${enabledTokens.length} enabled tokens`,
-        );
-
-        // Process each token
-        for (const token of enabledTokens) {
-          await this.processTokenTransfers(chain, token);
-        }
+      if (!chain) {
+        throw new Error(`Chain ${chainId} not found or disabled`);
       }
+
+      const token = await this.tokenModel.findOne({
+        chainId,
+        address: tokenAddress,
+        enabled: true,
+      });
+
+      if (!token) {
+        throw new Error(
+          `Token ${tokenAddress} not found or disabled on chain ${chainId}`,
+        );
+      }
+
+      await this.syncTransfers(chain, token);
 
       return {
         processed: true,
         jobId: job.id,
-        chainsProcessed: enabledChains.length,
-        tokensProcessed: enabledChains.reduce(async (total, chain) => {
-          const count = await this.tokenModel.countDocuments({
-            chainId: chain.chainId,
-            enabled: true,
-          });
-          return (await total) + count;
-        }, Promise.resolve(0)),
+        chainId,
+        tokenAddress,
+        tokenSymbol,
       };
     } catch (error) {
-      console.error('Error processing sync_transfers job:', error);
+      this.logger.error(
+        `Error processing sync job for ${tokenSymbol} on chain ${chainId}:`,
+        error.message,
+      );
       throw error;
     }
   }
 
-  private async processTokenTransfers(
+  private async syncTransfers(
     chain: ChainDocument,
     token: TokenDocument,
   ): Promise<void> {
-    try {
-      // Get or create syncer record for this chain-token combination
-      let syncer = await this.syncerModel.findOne({
-        chainId: chain.chainId,
-        token: token.address,
-      });
+    if (!chain.apiKey) {
+      this.logger.error(`No API key found for chain ${chain.chainId}`);
+      throw new Error(
+        `No API key found for chain ${chain.name} (${chain.chainId})`,
+      );
+    }
 
-      if (!syncer) {
-        // Create new syncer record
-        syncer = new this.syncerModel({
+    const apiKey = this.encryptionService.decrypt(chain.apiKey);
+
+    const latestBlock = await this.etherscanService.getLatestBlockNumber(
+      chain.rpcUrl,
+      apiKey,
+      chain.chainId,
+    );
+
+    const fromBlock = await this.getLastScannedBlock(
+      chain.chainId,
+      token.address,
+    );
+
+    const confirmations = chain.confirmations;
+    const toBlock = Math.max(0, latestBlock - confirmations);
+
+    this.logger.log(
+      `Scanning ${token.symbol} on chain ${chain.chainId} from block ${fromBlock} to ${toBlock}`,
+    );
+
+    const transferLogs = await this.etherscanService.getTransferLogs(
+      chain.rpcUrl,
+      apiKey,
+      chain.chainId,
+      token.address,
+      fromBlock,
+      toBlock,
+      chain.logsRange,
+    );
+
+    for (const log of transferLogs) {
+      const transfer = this.etherscanService.parseTransferLog(log);
+
+      try {
+        const transferDoc = new this.transferModel({
           chainId: chain.chainId,
           token: token.address,
-          lastScannedBlock: 0,
+          from: transfer.from,
+          to: transfer.to,
+          value: transfer.amount,
+          blockNumber: transfer.blockNumber,
+          txHash: transfer.transactionHash,
+          logIndex: transfer.logIndex,
+          timestamp: transfer.timestamp,
+          status: TransferStatus.PENDING,
         });
-        await syncer.save();
-        this.logger.log(
-          `Created new syncer for ${token.symbol} (${token.address}) on chain ${chain.chainId}`,
-        );
+
+        await transferDoc.save();
+      } catch (error) {
+        if (error.code === 11000) {
+          // Duplicate key error - transfer already exists (idempotency)
+          this.logger.debug(
+            `Transfer already exists: ${transfer.transactionHash}:${transfer.logIndex}`,
+          );
+        } else {
+          this.logger.error(
+            `Failed to save transfer ${transfer.transactionHash}:${transfer.logIndex}:`,
+            error.message,
+          );
+          throw error;
+        }
       }
+    }
 
-      // Check if API key exists and decrypt it
-      if (!chain.apiKey) {
-        this.logger.error(`No API key found for chain ${chain.chainId}`);
-        return;
-      }
-
-      // Decrypt the API key
-      const apiKey = this.encryptionService.decrypt(chain.apiKey);
-
-      // Get the latest block number
-      // const latestBlock = await this.etherscanService.getLatestBlockNumber(
-      //   chain.rpcUrl,
-      //   apiKey,
-      //   chain.chainId,
-      // );
-
-      const fromBlock = syncer.lastScannedBlock;
-
-      // const maxBlocksPerScan = chain.logsRange || 1000;
-      const toBlock = 'latest'; //Math.min(fromBlock + maxBlocksPerScan - 1, latestBlock);
-
-      this.logger.log(
-        `Scanning ${token.symbol} (${token.address}) on chain ${chain.chainId} from block ${fromBlock} to ${toBlock}`,
+    // Update syncer cursor with the highest block number processed
+    if (transferLogs.length > 0) {
+      const maxBlockNumber = Math.max(
+        ...transferLogs.map((log) => parseInt(log.blockNumber, 16)),
       );
-
-      // Fetch transfer logs
-      const transferLogs = await this.etherscanService.getTransferLogs(
-        chain.rpcUrl,
-        apiKey,
+      await this.updateLastScannedBlock(
         chain.chainId,
         token.address,
-        fromBlock,
-        toBlock,
-        chain.logsRange,
+        maxBlockNumber,
       );
-
-      if (transferLogs.length > 0) {
-        this.logger.log(
-          `Found ${transferLogs.length} transfer logs for ${token.symbol}`,
-        );
-
-        // Process and save each transfer log
-        let savedCount = 0;
-        let skippedCount = 0;
-
-        for (const log of transferLogs) {
-          const transfer = this.etherscanService.parseTransferLog(log);
-
-          try {
-            // Convert timestamp from hex to Date
-            const timestamp = new Date(parseInt(log.timeStamp, 16) * 1000);
-
-            // Create transfer document
-            const transferDoc = new this.transferModel({
-              chainId: chain.chainId,
-              token: token.address,
-              from: transfer.from,
-              to: transfer.to,
-              value: transfer.amount,
-              blockNumber: transfer.blockNumber,
-              txHash: transfer.transactionHash,
-              logIndex: transfer.logIndex,
-              timestamp: timestamp,
-              status: TransferStatus.PENDING,
-            });
-
-            await transferDoc.save();
-            savedCount++;
-
-            this.logger.debug(
-              `Saved transfer: ${transfer.amount} ${token.symbol} from ${transfer.from} to ${transfer.to} ` +
-                `(block: ${transfer.blockNumber}, tx: ${transfer.transactionHash})`,
-            );
-          } catch (error) {
-            if (error.code === 11000) {
-              // Duplicate key error - transfer already exists (idempotency)
-              skippedCount++;
-              this.logger.debug(
-                `Transfer already exists: ${transfer.transactionHash}:${transfer.logIndex}`,
-              );
-            } else {
-              this.logger.error(
-                `Failed to save transfer ${transfer.transactionHash}:${transfer.logIndex}:`,
-                error.message,
-              );
-            }
-          }
-        }
-
-        this.logger.log(
-          `Processed ${transferLogs.length} transfers for ${token.symbol}: ${savedCount} saved, ${skippedCount} skipped`,
-        );
-      }
-
-      // Update syncer with the highest block number processed
-      if (transferLogs.length > 0) {
-        const maxBlockNumber = Math.max(
-          ...transferLogs.map((log) => parseInt(log.blockNumber, 16)),
-        );
-        syncer.lastScannedBlock = maxBlockNumber;
-      }
-      await syncer.save();
 
       this.logger.log(
-        `Updated syncer for ${token.symbol} on chain ${chain.chainId}: last scanned block ${syncer.lastScannedBlock}`,
+        `Updated syncer for ${token.symbol} on chain ${chain.chainId}: processed ${transferLogs.length} transfers, cursor updated to block ${maxBlockNumber}`,
       );
-    } catch (error) {
-      this.logger.error(
-        `Error processing transfers for ${token.symbol} on chain ${chain.chainId}:`,
-        error.message,
+    } else {
+      this.logger.debug(
+        `No transfers found for ${token.symbol} on chain ${chain.chainId}, cursor remains at block ${fromBlock}`,
       );
-      // Don't throw here to avoid stopping the entire job
     }
+  }
+
+  private async getLastScannedBlock(
+    chainId: number,
+    tokenAddress: string,
+  ): Promise<number> {
+    // Use findOneAndUpdate with upsert to get or create syncer and return lastScannedBlock
+    const syncer = await this.syncerModel.findOneAndUpdate(
+      {
+        chainId,
+        token: tokenAddress,
+      },
+      {
+        $setOnInsert: {
+          chainId,
+          token: tokenAddress,
+          lastScannedBlock: 0,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      },
+    );
+
+    // Log if it was created (when lastScannedBlock is 0)
+    if (syncer.lastScannedBlock === 0) {
+      this.logger.log(
+        `Created new syncer for token ${tokenAddress} on chain ${chainId}`,
+      );
+    }
+
+    return syncer.lastScannedBlock;
+  }
+
+  private async updateLastScannedBlock(
+    chainId: number,
+    tokenAddress: string,
+    blockNumber: number,
+  ): Promise<void> {
+    await this.syncerModel.updateOne(
+      {
+        chainId,
+        token: tokenAddress,
+      },
+      {
+        lastScannedBlock: blockNumber,
+      },
+    );
   }
 }

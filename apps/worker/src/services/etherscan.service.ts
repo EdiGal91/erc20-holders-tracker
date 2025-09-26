@@ -35,7 +35,7 @@ export class EtherscanService {
     chainId: number,
     tokenAddress: string,
     fromBlock: number,
-    toBlock: number | 'latest' = 'latest',
+    toBlock: number,
     offset: number,
     page: number = 1,
   ): Promise<EtherscanTransferLog[]> {
@@ -61,7 +61,7 @@ export class EtherscanService {
         timeout: 30000, // 30 second timeout
       });
 
-      if (response.data.status !== '1') {
+      if (!Array.isArray(response.data.result)) {
         throw new Error(`Etherscan API error: ${response.data.message}`);
       }
 
@@ -89,14 +89,16 @@ export class EtherscanService {
     blockNumber: number;
     transactionHash: string;
     logIndex: number;
+    timestamp: Date;
   } {
     // topics[1] = from address (padded to 32 bytes)
     // topics[2] = to address (padded to 32 bytes)
     // data = amount (hex)
 
-    const from = '0x' + log.topics[1].slice(-40); // Remove padding, keep last 40 chars
-    const to = '0x' + log.topics[2].slice(-40); // Remove padding, keep last 40 chars
-    const amount = log.data; // Already in hex format
+    const from = '0x' + log.topics[1].slice(-40).toLowerCase(); // Remove padding, keep last 40 chars
+    const to = '0x' + log.topics[2].slice(-40).toLowerCase(); // Remove padding, keep last 40 chars
+    const amount = BigInt(log.data).toString();
+    const timestamp = new Date(parseInt(log.timeStamp, 16) * 1000);
 
     return {
       from,
@@ -105,6 +107,7 @@ export class EtherscanService {
       blockNumber: parseInt(log.blockNumber, 16),
       transactionHash: log.transactionHash,
       logIndex: parseInt(log.logIndex, 16),
+      timestamp,
     };
   }
 
