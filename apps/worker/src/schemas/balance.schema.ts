@@ -49,6 +49,13 @@ export class Balance {
     default: '0',
   })
   pending: string; // Pending balance (string to handle big numbers)
+
+  @Prop({
+    required: true,
+    default: 0,
+    index: true,
+  })
+  blockNumber: number; // Highest block number from processed transfers
 }
 
 export const BalanceSchema = SchemaFactory.createForClass(Balance);

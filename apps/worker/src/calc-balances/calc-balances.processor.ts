@@ -59,15 +59,18 @@ export class CalcBalancesProcessor extends WorkerHost {
         }),
       ]);
 
-      // Calculate balances separated by status
+      // Calculate balances separated by status and track highest block number
       let confirmedIncoming = BigInt(0);
       let pendingIncoming = BigInt(0);
       let confirmedOutgoing = BigInt(0);
       let pendingOutgoing = BigInt(0);
+      let highestBlockNumber = 0;
 
       // Process incoming transfers
       for (const transfer of incomingTransfers) {
         const amount = BigInt(transfer.value);
+        highestBlockNumber = Math.max(highestBlockNumber, transfer.blockNumber);
+
         if (transfer.status === 'confirmed') {
           confirmedIncoming += amount;
         } else {
@@ -78,6 +81,8 @@ export class CalcBalancesProcessor extends WorkerHost {
       // Process outgoing transfers
       for (const transfer of outgoingTransfers) {
         const amount = BigInt(transfer.value);
+        highestBlockNumber = Math.max(highestBlockNumber, transfer.blockNumber);
+
         if (transfer.status === 'confirmed') {
           confirmedOutgoing += amount;
         } else {
@@ -99,6 +104,7 @@ export class CalcBalancesProcessor extends WorkerHost {
         {
           confirmed: confirmedBalance.toString(),
           pending: pendingBalance.toString(),
+          blockNumber: highestBlockNumber,
         },
         {
           upsert: true,
