@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BullBoardModule } from '@bull-board/nestjs';
-import { ExpressAdapter } from '@bull-board/express';
 import { SyncTransfersModule } from './sync-transfers/sync-transfers.module';
 import { CalcBalancesModule } from './calc-balances/calc-balances.module';
 
@@ -28,10 +26,6 @@ import { CalcBalancesModule } from './calc-balances/calc-balances.module';
           port: configService.getOrThrow<number>('REDIS_PORT'),
         },
       }),
-    }),
-    BullBoardModule.forRoot({
-      route: '/queues',
-      adapter: ExpressAdapter,
     }),
     SyncTransfersModule,
     CalcBalancesModule,

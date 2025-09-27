@@ -1,8 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { BullBoardModule } from '@bull-board/nestjs';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { SyncTransfersProcessor } from './sync-transfers.processor';
 import { SyncSchedulerService } from './sync-scheduler.service';
 import { Chain, ChainSchema } from '../schemas/chain.schema';
@@ -27,10 +25,6 @@ import { EncryptionService } from '../common/encryption.service';
     }),
     BullModule.registerQueue({
       name: 'calc_balances',
-    }),
-    BullBoardModule.forFeature({
-      name: 'sync_transfers',
-      adapter: BullMQAdapter,
     }),
   ],
   providers: [
