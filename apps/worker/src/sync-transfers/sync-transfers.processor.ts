@@ -144,7 +144,7 @@ export class SyncTransfersProcessor extends WorkerHost {
           txHash: transfer.transactionHash,
           logIndex: transfer.logIndex,
           timestamp: transfer.timestamp,
-          status: TransferStatus.PENDING,
+          status: TransferStatus.CONFIRMED,
         });
 
         await transferDoc.save();
