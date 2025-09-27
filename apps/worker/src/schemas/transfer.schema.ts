@@ -15,7 +15,6 @@ export enum TransferStatus {
 export class Transfer {
   @Prop({
     required: true,
-    index: true,
   })
   chainId: number;
 
@@ -26,7 +25,6 @@ export class Transfer {
       validator: (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v),
       message: 'Token address must be a valid Ethereum address',
     },
-    index: true,
   })
   token: string;
 
@@ -37,7 +35,6 @@ export class Transfer {
       validator: (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v),
       message: 'From address must be a valid Ethereum address',
     },
-    index: true,
   })
   from: string;
 
@@ -48,7 +45,6 @@ export class Transfer {
       validator: (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v),
       message: 'To address must be a valid Ethereum address',
     },
-    index: true,
   })
   to: string;
 
@@ -60,7 +56,6 @@ export class Transfer {
 
   @Prop({
     required: true,
-    index: true,
   })
   blockNumber: number;
 
@@ -71,7 +66,6 @@ export class Transfer {
       validator: (v: string) => /^0x[a-fA-F0-9]{64}$/.test(v),
       message: 'Transaction hash must be a valid Ethereum transaction hash',
     },
-    index: true,
   })
   txHash: string;
 
@@ -83,7 +77,6 @@ export class Transfer {
   @Prop({
     required: true,
     type: Date,
-    index: true,
   })
   timestamp: Date;
 
@@ -91,7 +84,6 @@ export class Transfer {
     required: true,
     enum: TransferStatus,
     default: TransferStatus.PENDING,
-    index: true,
   })
   status: TransferStatus;
 }
@@ -103,4 +95,21 @@ export const TransferSchema = SchemaFactory.createForClass(Transfer);
 TransferSchema.index(
   { chainId: 1, txHash: 1, logIndex: 1 },
   { unique: true, name: 'transfer_idempotency' },
+);
+
+// For calc-balances (incoming/outgoing)
+TransferSchema.index(
+  { chainId: 1, token: 1, to: 1 },
+  { name: 'by_chain_token_to' },
+);
+TransferSchema.index(
+  { chainId: 1, token: 1, from: 1 },
+  { name: 'by_chain_token_from' },
+);
+
+// TODO:
+// For bulk-confirm step
+TransferSchema.index(
+  { chainId: 1, status: 1, blockNumber: 1 },
+  { name: 'by_chain_status_block' },
 );
