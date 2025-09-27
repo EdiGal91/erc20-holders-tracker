@@ -128,55 +128,66 @@ export class SyncTransfersProcessor extends WorkerHost {
     // Track unique addresses for balance calculation
     const uniqueAddresses = new Set<string>();
     let savedCount = 0;
-    let skippedCount = 0;
 
     for (const log of transferLogs) {
       const transfer = this.etherscanService.parseTransferLog(log);
 
       try {
-        const transferDoc = new this.transferModel({
-          chainId: chain.chainId,
-          token: token.address,
-          from: transfer.from,
-          to: transfer.to,
-          value: transfer.amount,
-          blockNumber: transfer.blockNumber,
-          txHash: transfer.transactionHash,
-          logIndex: transfer.logIndex,
-          timestamp: transfer.timestamp,
-          status: TransferStatus.CONFIRMED,
-        });
+        // Use findOneAndUpdate with upsert to handle both new transfers and pending->confirmed updates
+        const result = await this.transferModel.findOneAndUpdate(
+          {
+            chainId: chain.chainId,
+            txHash: transfer.transactionHash,
+            logIndex: transfer.logIndex,
+          },
+          {
+            $setOnInsert: {
+              // These fields are only set when creating a new document
+              chainId: chain.chainId,
+              token: token.address,
+              from: transfer.from,
+              to: transfer.to,
+              value: transfer.amount,
+              blockNumber: transfer.blockNumber,
+              txHash: transfer.transactionHash,
+              logIndex: transfer.logIndex,
+              timestamp: transfer.timestamp,
+            },
+            $set: {
+              // This field is always updated (new or existing)
+              status: TransferStatus.CONFIRMED,
+            },
+          },
+          {
+            upsert: true,
+            new: true,
+            runValidators: true,
+          },
+        );
 
-        await transferDoc.save();
-        savedCount++;
+        if (result) {
+          savedCount++;
 
-        // Add addresses to set for balance calculation (skip zero address)
-        const zeroAddress = '0x0000000000000000000000000000000000000000';
-        if (transfer.from !== zeroAddress) {
-          uniqueAddresses.add(transfer.from.toLowerCase());
-        }
-        if (transfer.to !== zeroAddress) {
-          uniqueAddresses.add(transfer.to.toLowerCase());
+          // Add addresses to set for balance calculation (skip zero address)
+          const zeroAddress = '0x0000000000000000000000000000000000000000';
+          if (transfer.from !== zeroAddress) {
+            uniqueAddresses.add(transfer.from.toLowerCase());
+          }
+          if (transfer.to !== zeroAddress) {
+            uniqueAddresses.add(transfer.to.toLowerCase());
+          }
         }
       } catch (error) {
-        if (error.code === 11000) {
-          // Duplicate key error - transfer already exists (idempotency)
-          skippedCount++;
-          this.logger.debug(
-            `Transfer already exists: ${transfer.transactionHash}:${transfer.logIndex}`,
-          );
-        } else {
-          this.logger.error(
-            `Failed to save transfer ${transfer.transactionHash}:${transfer.logIndex}:`,
-            error.message,
-          );
-          throw error;
-        }
+        this.logger.error(
+          `Failed to save/update transfer ${transfer.transactionHash}:${transfer.logIndex}:`,
+          error.message,
+        );
+        throw error;
       }
     }
 
     this.logger.log(
-      `Processed ${transferLogs.length} transfers for ${token.symbol}: ${savedCount} saved, ${skippedCount} skipped`,
+      `Processed ${transferLogs.length} transfers for ${token.symbol}: ${savedCount} saved/updated`,
     );
 
     // Add unique addresses to calc_balances queue
