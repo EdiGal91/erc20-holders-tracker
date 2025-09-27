@@ -19,6 +19,7 @@ export class SyncSchedulerService {
 
   @Cron('*/15 * * * * *') // Every 15 seconds
   async scheduleSyncJobs() {
+    const slot = Math.floor(Date.now() / 15_000);
     try {
       // Fetch all enabled chains
       const enabledChains = await this.chainModel
@@ -49,11 +50,9 @@ export class SyncSchedulerService {
             tokenSymbol: token.symbol,
           };
 
-          await this.syncTransfersQueue.add(
-            'sync_token_transfers',
-            jobData,
-            {},
-          );
+          await this.syncTransfersQueue.add('sync_token_transfers', jobData, {
+            jobId: `sync_token_transfers_${slot}_${chain.chainId}_${token.address}`,
+          });
         }
       }
     } catch (error) {
