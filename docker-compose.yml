@@ -35,6 +35,18 @@ services:
       - mongo
       - redis
 
+  dashboard:
+    image: node:22.20.0
+    working_dir: /app
+    ports: ["4002:4002"]
+    container_name: dashboard
+    volumes:
+      - ./apps/dashboard:/app
+      - dashboard_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run start:dev"
+    depends_on:
+      - redis
+
   # web:
   #   build: ./apps/web
   #   env_file: .env
@@ -58,3 +70,4 @@ volumes:
   admin_node_modules:
   api_node_modules:
   worker_node_modules:
+  dashboard_node_modules:
