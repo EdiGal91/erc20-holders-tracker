@@ -7,7 +7,7 @@
   "version": "1.0.0",
   "description": "ERC20 Tracker",
   "scripts": {
-    "dev": "docker compose up -d --build",
+    "dev": "docker compose up -d --build --scale worker=2",
     "stop": "docker compose down",
     "restart": "npm run stop && npm run dev"
   },

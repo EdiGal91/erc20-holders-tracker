@@ -46,6 +46,7 @@ export class SyncSchedulerService {
         for (const token of enabledTokens) {
           const jobData = {
             chainId: chain.chainId,
+            chainName: chain.name,
             tokenAddress: token.address,
             tokenSymbol: token.symbol,
           };
