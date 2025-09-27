@@ -2,6 +2,7 @@ services:
   mongo:
     image: mongo:8
     ports: ["27017:27017"]
+    expose: ["27017"]
     volumes: ["mongo_data:/data/db"]
     container_name: mongo
 
@@ -64,9 +65,22 @@ services:
     environment:
       - VITE_HOST=0.0.0.0
 
+  live-listener:
+    image: node:22.20.0
+    working_dir: /app
+    container_name: live-listener
+    volumes:
+      - ./apps/live-listener:/app
+      - live-listener_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run start:dev"
+    depends_on:
+      - mongo
+      - redis
+
 volumes:
   mongo_data:
   admin_node_modules:
   api_node_modules:
   worker_node_modules:
   dashboard_node_modules:
+  live-listener_node_modules:
