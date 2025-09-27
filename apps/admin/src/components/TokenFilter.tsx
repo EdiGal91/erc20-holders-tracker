@@ -5,7 +5,7 @@ interface TokenFilterProps {
   selectedToken: string;
   onTokenChange: (tokenAddress: string) => void;
   isLoading: boolean;
-  chains: Array<{ chainId: number; name: string; symbol: string }>;
+  chains: Array<{ chainId: number; name?: string; symbol?: string }>;
 }
 
 export function TokenFilter({

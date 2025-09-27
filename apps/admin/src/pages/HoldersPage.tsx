@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useTokens } from "../hooks/useTokens";
 import { useChains } from "../hooks/useChains";
 import { useHolders } from "../hooks/useHolders";
 import { TokenFilter } from "../components/TokenFilter";
 import { HoldersTable } from "../components/HoldersTable";
+import { Button } from "../components/ui/Button";
 
 export function HoldersPage() {
   const [selectedToken, setSelectedToken] = useState<string>("");
@@ -14,6 +16,8 @@ export function HoldersPage() {
     data: holders = [],
     isLoading: holdersLoading,
     error,
+    refetch: refetchHolders,
+    isFetching: isRefetching,
   } = useHolders(selectedToken);
 
   return (
@@ -34,13 +38,25 @@ export function HoldersPage() {
       />
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Top 20 Holders
-          </h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Ranked by total balance (confirmed + pending)
-          </p>
+        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              Top 20 Holders
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Ranked by total balance (confirmed + pending)
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => refetchHolders()}
+            loading={isRefetching}
+            disabled={holdersLoading}
+          >
+            <ArrowPathIcon className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
         </div>
 
         <HoldersTable
