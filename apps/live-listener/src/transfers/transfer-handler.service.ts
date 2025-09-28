@@ -53,11 +53,9 @@ export class TransferHandlerService {
           address,
         },
         opts: {
-          // provide txHash and logIndex
-          // jobId: `calc_balance_live_${chainId}_${tokenAddress}_${address}`,
-          // Remove duplicate jobs if they exist
-          // removeOnComplete: 10,
-          // removeOnFail: 5,
+          deduplication: {
+            id: `calc_balance_live_${chainId}_${tokenAddress}_${address}`,
+          },
         },
       }));
 
@@ -71,7 +69,6 @@ export class TransferHandlerService {
         'Failed to schedule balance calculations:',
         error.message,
       );
-      // Don't throw here to avoid stopping the transfer processing
     }
   }
 

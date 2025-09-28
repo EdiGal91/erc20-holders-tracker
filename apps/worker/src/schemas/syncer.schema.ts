@@ -30,6 +30,13 @@ export class Syncer {
     default: 0,
   })
   lastScannedBlock: number;
+
+  @Prop({
+    required: true,
+    min: 0,
+    default: 0,
+  })
+  lastConfirmedBlock: number;
 }
 
 export const SyncerSchema = SchemaFactory.createForClass(Syncer);
@@ -37,3 +44,4 @@ export const SyncerSchema = SchemaFactory.createForClass(Syncer);
 SyncerSchema.index({ chainId: 1, token: 1 }, { unique: true });
 SyncerSchema.index({ chainId: 1 });
 SyncerSchema.index({ lastScannedBlock: 1 });
+SyncerSchema.index({ lastConfirmedBlock: 1 });

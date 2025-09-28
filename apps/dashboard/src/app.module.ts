@@ -37,6 +37,13 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
       name: 'calc_balances',
       adapter: BullMQAdapter,
     }),
+    BullModule.registerQueue({
+      name: 'cleanup_reorged',
+    }),
+    BullBoardModule.forFeature({
+      name: 'cleanup_reorged',
+      adapter: BullMQAdapter,
+    }),
   ],
   controllers: [],
   providers: [],

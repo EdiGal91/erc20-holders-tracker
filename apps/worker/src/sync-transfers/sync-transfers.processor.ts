@@ -33,14 +33,8 @@ export class SyncTransfersProcessor extends WorkerHost {
 
   async process(job: Job<any, any, string>): Promise<any> {
     const { chainId, chainName, tokenAddress, tokenSymbol } = job.data;
-    const jobId = job.id;
-    if (!jobId) {
-      throw new Error('Job ID is required');
-    }
 
-    this.logger.log(
-      `Processing sync job[${jobId}] for ${tokenSymbol} on chain ${chainName}`,
-    );
+    this.logger.log(`Processing sync for ${tokenSymbol} on chain ${chainName}`);
 
     try {
       const chain = await this.chainModel
@@ -63,7 +57,7 @@ export class SyncTransfersProcessor extends WorkerHost {
         );
       }
 
-      await this.syncTransfers(jobId!, chain, token);
+      await this.syncTransfers(chain, token);
 
       return {
         processed: true,
@@ -82,7 +76,6 @@ export class SyncTransfersProcessor extends WorkerHost {
   }
 
   private async syncTransfers(
-    jobId: string,
     chain: ChainDocument,
     token: TokenDocument,
   ): Promise<void> {
@@ -193,7 +186,6 @@ export class SyncTransfersProcessor extends WorkerHost {
     // Add unique addresses to calc_balances queue
     if (uniqueAddresses.size > 0) {
       await this.scheduleBalanceCalculations(
-        jobId,
         chain.chainId,
         token.address,
         Array.from(uniqueAddresses),
@@ -236,6 +228,7 @@ export class SyncTransfersProcessor extends WorkerHost {
           chainId,
           token: tokenAddress,
           lastScannedBlock: 0,
+          lastConfirmedBlock: 0,
         },
       },
       {
@@ -273,7 +266,6 @@ export class SyncTransfersProcessor extends WorkerHost {
   }
 
   private async scheduleBalanceCalculations(
-    jobId: string,
     chainId: number,
     tokenAddress: string,
     addresses: string[],
@@ -287,7 +279,9 @@ export class SyncTransfersProcessor extends WorkerHost {
           address,
         },
         opts: {
-          jobId: `calc_balance_${jobId}_${chainId}_${tokenAddress}_${address}`,
+          deduplication: {
+            id: `calc_balance_${chainId}_${tokenAddress}_${address}`,
+          },
         },
       }));
 

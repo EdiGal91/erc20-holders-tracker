@@ -2,7 +2,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SyncTransfersProcessor } from './sync-transfers.processor';
-import { SyncSchedulerService } from './sync-scheduler.service';
+import { CleanupReorgedProcessor } from './cleanup-reorged.processor';
+import { SchedulerService } from './scheduler.service';
 import { Chain, ChainSchema } from '../schemas/chain.schema';
 import { Token, TokenSchema } from '../schemas/token.schema';
 import { Syncer, SyncerSchema } from '../schemas/syncer.schema';
@@ -26,10 +27,14 @@ import { EncryptionService } from '../common/encryption.service';
     BullModule.registerQueue({
       name: 'calc_balances',
     }),
+    BullModule.registerQueue({
+      name: 'cleanup_reorged',
+    }),
   ],
   providers: [
     SyncTransfersProcessor,
-    SyncSchedulerService,
+    CleanupReorgedProcessor,
+    SchedulerService,
     EtherscanService,
     EncryptionService,
   ],
