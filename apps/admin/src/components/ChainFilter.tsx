@@ -24,7 +24,9 @@ export function ChainFilter({
       chain.symbol?.charAt(0) ||
       chain.name?.charAt(0) ||
       chain.chainId.toString().charAt(0),
-    disabled: !chain.enabled,
+    disabledStates: !chain.enabled
+      ? [{ label: "Disabled", type: "warning" as const }]
+      : undefined,
   }));
 
   return (

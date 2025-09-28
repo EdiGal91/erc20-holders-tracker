@@ -7,7 +7,12 @@ interface TokenFilterProps {
   selectedToken: string;
   onTokenChange: (tokenAddress: string) => void;
   isLoading: boolean;
-  chains: Array<{ chainId: number; name?: string; symbol?: string }>;
+  chains: Array<{
+    chainId: number;
+    name?: string;
+    symbol?: string;
+    enabled?: boolean;
+  }>;
 }
 
 export function TokenFilter({
@@ -23,13 +28,26 @@ export function TokenFilter({
 
   const filterItems: FilterItem[] = tokens.map((token) => {
     const chainInfo = getChainInfo(token.chainId);
+    const isChainDisabled = chainInfo?.enabled === false;
+
+    const disabledStates = [];
+    if (!token.enabled) {
+      disabledStates.push({ label: "Token: Disabled", type: "error" as const });
+    }
+    if (isChainDisabled) {
+      disabledStates.push({
+        label: "Chain: Disabled",
+        type: "warning" as const,
+      });
+    }
+
     return {
       id: token.address,
       title: token.symbol,
       subtitle: chainInfo?.name || `Chain ${token.chainId}`,
       iconBg: "bg-gradient-to-br from-indigo-500 to-purple-600",
       iconText: token.symbol.charAt(0),
-      disabled: !token.enabled,
+      disabledStates: disabledStates.length > 0 ? disabledStates : undefined,
     };
   });
 

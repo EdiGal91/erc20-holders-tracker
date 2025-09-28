@@ -8,6 +8,10 @@ export interface FilterItem {
   iconBg?: string;
   iconText?: string;
   disabled?: boolean;
+  disabledStates?: Array<{
+    label: string;
+    type: "warning" | "error";
+  }>;
 }
 
 interface CardFilterProps<T extends string | number | undefined> {
@@ -123,6 +127,22 @@ export function CardFilter<T extends string | number | undefined>({
                 {item.disabled && (
                   <div className="text-xs text-amber-600 font-medium">
                     Disabled
+                  </div>
+                )}
+                {item.disabledStates && item.disabledStates.length > 0 && (
+                  <div className="space-y-1">
+                    {item.disabledStates.map((state, index) => (
+                      <div
+                        key={index}
+                        className={`text-xs font-medium ${
+                          state.type === "error"
+                            ? "text-red-600"
+                            : "text-amber-600"
+                        }`}
+                      >
+                        {state.label}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
