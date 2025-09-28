@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
-import { useEnabledChains } from "../../hooks/useChains";
+import { useChains } from "../../hooks/useChains";
 import type {
   Token,
   CreateTokenRequest,
@@ -30,7 +30,7 @@ export function TokenForm({
   onCancel,
   loading,
 }: TokenFormProps) {
-  const { data: chains = [] } = useEnabledChains();
+  const { data: chains = [] } = useChains(true); // Include disabled chains
 
   const {
     register,
@@ -81,6 +81,7 @@ export function TokenForm({
             {chains.map((chain) => (
               <option key={chain.chainId} value={chain.chainId}>
                 {chain.name || `Chain ${chain.chainId}`} ({chain.chainId})
+                {!chain.enabled ? " - Disabled" : ""}
               </option>
             ))}
           </select>

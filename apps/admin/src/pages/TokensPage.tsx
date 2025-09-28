@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { TokenForm } from "../components/forms/TokenForm";
+import { ChainFilter } from "../components/ChainFilter";
 import {
   useTokens,
   useCreateToken,
@@ -9,7 +10,7 @@ import {
   useDeleteToken,
   useToggleTokenEnabled,
 } from "../hooks/useTokens";
-import { useEnabledChains } from "../hooks/useChains";
+import { useChains } from "../hooks/useChains";
 import type { Token, CreateTokenRequest, UpdateTokenRequest } from "../lib/api";
 
 export function TokensPage() {
@@ -18,7 +19,7 @@ export function TokensPage() {
   const [includeDisabled, setIncludeDisabled] = useState(false);
   const [selectedChainId, setSelectedChainId] = useState<number | undefined>();
 
-  const { data: chains = [] } = useEnabledChains();
+  const { data: chains = [] } = useChains(true); // Include disabled chains
   const {
     data: tokens = [],
     isLoading,
@@ -29,19 +30,23 @@ export function TokensPage() {
   const deleteMutation = useDeleteToken();
   const toggleMutation = useToggleTokenEnabled();
 
-  const handleCreate = (data: CreateTokenRequest) => {
-    createMutation.mutate(data, {
+  const handleCreate = (data: CreateTokenRequest | UpdateTokenRequest) => {
+    createMutation.mutate(data as CreateTokenRequest, {
       onSuccess: () => {
         setShowCreateModal(false);
       },
     });
   };
 
-  const handleUpdate = (data: UpdateTokenRequest) => {
+  const handleUpdate = (data: CreateTokenRequest | UpdateTokenRequest) => {
     if (!editingToken) return;
 
     updateMutation.mutate(
-      { chainId: editingToken.chainId, address: editingToken.address, data },
+      {
+        chainId: editingToken.chainId,
+        address: editingToken.address,
+        data: data as UpdateTokenRequest,
+      },
       {
         onSuccess: () => {
           setEditingToken(null);
@@ -69,6 +74,11 @@ export function TokensPage() {
     return chain?.name || `Chain ${chainId}`;
   };
 
+  const getChainStatus = (chainId: number) => {
+    const chain = chains.find((c) => c.chainId === chainId);
+    return chain?.enabled ?? false;
+  };
+
   const getTokenExplorerUrl = (chainId: number, address: string) => {
     const chain = chains.find((c) => c.chainId === chainId);
     if (!chain?.explorerUrl) return null;
@@ -93,22 +103,6 @@ export function TokensPage() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none space-x-2">
-          <select
-            value={selectedChainId || ""}
-            onChange={(e) =>
-              setSelectedChainId(
-                e.target.value ? Number(e.target.value) : undefined
-              )
-            }
-            className="rounded-md border-gray-300 text-sm"
-          >
-            <option value="">All Chains</option>
-            {chains.map((chain) => (
-              <option key={chain.chainId} value={chain.chainId}>
-                {chain.name || `Chain ${chain.chainId}`}
-              </option>
-            ))}
-          </select>
           <Button
             variant="secondary"
             size="sm"
@@ -119,6 +113,13 @@ export function TokensPage() {
           <Button onClick={() => setShowCreateModal(true)}>Add Token</Button>
         </div>
       </div>
+
+      <ChainFilter
+        chains={chains}
+        selectedChainId={selectedChainId}
+        onChainChange={setSelectedChainId}
+        isLoading={isLoading}
+      />
 
       {isLoading ? (
         <div className="text-center py-8">
@@ -215,15 +216,24 @@ export function TokensPage() {
                           <div>Decimals: {token.decimals}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              token.enabled
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {token.enabled ? "Enabled" : "Disabled"}
-                          </span>
+                          <div className="space-y-1">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                token.enabled
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              Token: {token.enabled ? "Enabled" : "Disabled"}
+                            </span>
+                            {!getChainStatus(token.chainId) && (
+                              <div>
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                                  Chain: Disabled
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                           <Button
