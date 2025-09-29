@@ -90,6 +90,10 @@ This project consists of 5 microservices working together to provide a complete 
       cp apps/live-listener/.env.example apps/live-listener/.env
       ```
       After creating the `live-listener`'s `.env` file, you must add your `INFURA_WS_API_KEY` to it.
+    - For the `worker` app:
+      ```bash
+      cp apps/worker/.env.example apps/worker/.env
+      ```
 
 3.  **Start all services**
     ```bash
