@@ -76,7 +76,7 @@ This project consists of 5 microservices working together to provide a complete 
    Copy the example environment file and fill in your details.
 
    ```bash
-   cp apps/api/env.example apps/api/.env
+   cp apps/api/.env.example apps/api/.env
    ```
 
 3. **Start all services**
