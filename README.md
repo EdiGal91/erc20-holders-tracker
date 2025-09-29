@@ -67,11 +67,19 @@ This project consists of 5 microservices working together to provide a complete 
 1. **Clone the repository**
 
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:EdiGal91/erc20-holders-tracker.git
    cd erc20-tracker
    ```
 
-2. **Start all services**
+2. **Set up environment variables**
+
+   Copy the example environment file and fill in your details.
+
+   ```bash
+   cp apps/api/env.example apps/api/.env
+   ```
+
+3. **Start all services**
 
    ```bash
    npm run dev
@@ -82,7 +90,7 @@ This project consists of 5 microservices working together to provide a complete 
    - Scale worker service to 2 instances for better performance
    - Set up MongoDB and Redis automatically
 
-3. **Access the applications**
+4. **Access the applications**
    - **Admin Panel**: http://localhost:5173
    - **Queue Dashboard**: http://localhost:4002/queues
    - **API**: http://localhost:4000
