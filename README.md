@@ -64,31 +64,43 @@ This project consists of 5 microservices working together to provide a complete 
 
 ### Installation & Setup
 
-1. **Clone the repository**
+1.  **Clone the repository**
 
-   ```bash
-   git clone git@github.com:EdiGal91/erc20-holders-tracker.git
-   cd erc20-tracker
-   ```
+    ```bash
+    git clone git@github.com:EdiGal91/erc20-holders-tracker.git
+    cd erc20-tracker
+    ```
 
-2. **Set up environment variables**
+2.  **Set up environment variables**
+    Create `.env` files for each service by copying the corresponding `.env.example` file:
+    - For the `admin` app:
+      ```bash
+      cp apps/admin/.env.example apps/admin/.env
+      ```
+    - For the `api` app:
+      ```bash
+      cp apps/api/.env.example apps/api/.env
+      ```
+    - For the `dashboard` app:
+      ```bash
+      cp apps/dashboard/.env.example apps/dashboard/.env
+      ```
+    - For the `live-listener` app:
+      ```bash
+      cp apps/live-listener/.env.example apps/live-listener/.env
+      ```
+      After creating the `live-listener`'s `.env` file, you must add your `INFURA_WS_API_KEY` to it.
 
-   Copy the example environment file and fill in your details.
+3.  **Start all services**
+    ```bash
+    npm run dev
+    ```
 
-   ```bash
-   cp apps/api/.env.example apps/api/.env
-   ```
+This command will:
 
-3. **Start all services**
-
-   ```bash
-   npm run dev
-   ```
-
-   This command will:
-   - Build and start all Docker containers
-   - Scale worker service to 2 instances for better performance
-   - Set up MongoDB and Redis automatically
+- Build and start all Docker containers
+- Scale worker service to 2 instances for better performance
+- Set up MongoDB and Redis automatically
 
 4. **Access the applications**
    - **Admin Panel**: http://localhost:5173
